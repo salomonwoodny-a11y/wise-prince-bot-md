@@ -21,7 +21,7 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
-
+app.use(express.static("public"));
 app.get("/", (req, res) => {
   res.send("👑 WISE PRINCE ✝️ PLATFORM IS RUNNING!");
 });
