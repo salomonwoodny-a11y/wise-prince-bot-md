@@ -9,20 +9,24 @@ import fs from "fs";
 import path from "path";
 import { randomBytes } from "crypto";
 
+import { attachBotHandlers } from "./bot.js";
+
 const sessions = new Map();
 
 const DATA_DIR = path.join(process.cwd(), "data", "sessions");
 
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-}
+fs.mkdirSync(DATA_DIR, { recursive: true });
 
 function generateSessionId() {
   return randomBytes(4).toString("hex").toUpperCase();
 }
 
 export async function startSession() {
-  const sessionId = generateSessionId();
+  let sessionId;
+
+  do {
+    sessionId = generateSessionId();
+  } while (sessions.has(sessionId));
 
   const sessionPath = path.join(DATA_DIR, sessionId);
   const authPath = path.join(sessionPath, "auth");
@@ -51,6 +55,8 @@ export async function startSession() {
 
   sock.ev.on("creds.update", saveCreds);
 
+  attachBotHandlers(sock, sessionId);
+
   sock.ev.on("connection.update", async (update) => {
     const { connection, qr, lastDisconnect } = update;
 
@@ -69,8 +75,8 @@ export async function startSession() {
       const reason =
         lastDisconnect?.error?.output?.statusCode;
 
-      if (reason !== DisconnectReason.loggedOut) {
-        console.log(`Session ${sessionId} disconnected.`);
+      if (reason === DisconnectReason.loggedOut) {
+        sessions.delete(sessionId);
       }
     }
   });
@@ -121,4 +127,4 @@ export async function stopSession(sessionId) {
   sessions.delete(sessionId);
 
   return true;
-    }
+             }
