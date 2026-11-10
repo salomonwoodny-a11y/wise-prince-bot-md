@@ -10,6 +10,11 @@ import {
   stopSession
 } from "./sessionManager.js";
 
+import {
+  saveConfig,
+  getConfig
+} from "./configManager.js";
+
 dotenv.config();
 
 const app = express();
@@ -18,7 +23,7 @@ app.use(cors());
 app.use(express.json());
 
 app.get("/", (req, res) => {
-  res.send("👑 WISE PRINCE ✝️ BOT PLATFORM IS RUNNING!");
+  res.send("👑 WISE PRINCE ✝️ PLATFORM IS RUNNING!");
 });
 
 app.get("/api/status", (req, res) => {
@@ -29,15 +34,13 @@ app.get("/api/status", (req, res) => {
   });
 });
 
-// CREATE WHATSAPP SESSION
+// CREATE SESSION
 app.post("/api/session/create", async (req, res) => {
   try {
     const session = await startSession();
     res.json(session);
   } catch (error) {
-    res.status(500).json({
-      error: error.message
-    });
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -58,7 +61,7 @@ app.get("/api/session/:id", (req, res) => {
   });
 });
 
-// WHATSAPP PAIRING CODE
+// PAIRING CODE
 app.post("/api/session/:id/pair", async (req, res) => {
   try {
     const { phoneNumber } = req.body;
@@ -74,17 +77,57 @@ app.post("/api/session/:id/pair", async (req, res) => {
       phoneNumber
     );
 
+    res.json({ pairingCode: code });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// SAVE BOT CONFIGURATION
+app.post("/api/session/:id/config", (req, res) => {
+  try {
+    const session = getSession(req.params.id);
+
+    if (!session) {
+      return res.status(404).json({
+        error: "Session sa a pa egziste."
+      });
+    }
+
+    const config = saveConfig(req.params.id, req.body);
+
     res.json({
-      pairingCode: code
+      success: true,
+      message: "Configuration anrejistre!",
+      config
     });
   } catch (error) {
-    res.status(500).json({
+    res.status(400).json({
       error: error.message
     });
   }
 });
 
-// LIST ALL SESSIONS
+// GET BOT CONFIGURATION
+app.get("/api/session/:id/config", (req, res) => {
+  try {
+    const config = getConfig(req.params.id);
+
+    if (!config) {
+      return res.status(404).json({
+        error: "Pa gen configuration pou session sa a."
+      });
+    }
+
+    res.json(config);
+  } catch (error) {
+    res.status(400).json({
+      error: error.message
+    });
+  }
+});
+
+// LIST SESSIONS
 app.get("/api/sessions", (req, res) => {
   res.json(getAllSessions());
 });
@@ -95,9 +138,7 @@ app.delete("/api/session/:id", async (req, res) => {
     const stopped = await stopSession(req.params.id);
     res.json({ stopped });
   } catch (error) {
-    res.status(500).json({
-      error: error.message
-    });
+    res.status(500).json({ error: error.message });
   }
 });
 
