@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WISE PRINCE BOT</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #080808;
+      color: white;
+    }
+
+    header {
+      text-align: center;
+      padding: 25px 10px;
+    }
+
+    h1 {
+      color: #d4af37;
+      font-size: 30px;
+    }
+
+    header p {
+      color: #aaa;
+    }
+
+    .card {
+      max-width: 500px;
+      margin: 20px auto;
+      padding: 22px;
+      background: #151515;
+      border: 1px solid #b89635;
+      border-radius: 15px;
+    }
+
+    h2 {
+      color: #d4af37;
+      font-size: 20px;
+    }
+
+    input, select, button {
+      width: 100%;
+      padding: 13px;
+      margin: 8px 0;
+      border-radius: 8px;
+      border: none;
+      font-size: 15px;
+    }
+
+    input, select {
+      background: #252525;
+      color: white;
+      border: 1px solid #444;
+    }
+
+    button {
+      background: #d4af37;
+      color: black;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: .5;
+    }
+
+    .result {
+      text-align: center;
+      color: #d4af37;
+      overflow-wrap: anywhere;
+      margin-top: 15px;
+    }
+
+    #qr {
+      display: block;
+      width: 220px;
+      max-width: 100%;
+      margin: 15px auto;
+      background: white;
+    }
+
+    label {
+      display: block;
+      margin-top: 12px;
+      color: #ddd;
+    }
+
+    .check {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .check input {
+      width: auto;
+    }
+
+    footer {
+      text-align: center;
+      color: #888;
+      margin: 30px 0;
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <h1>👑 WISE PRINCE ✝️</h1>
+  <p>Multi-Session WhatsApp Bot Platform</p>
+  <p>Ti moun li, granmoun konprann.</p>
+</header>
+
+<div class="card">
+  <h2>📱 CONNECT WHATSAPP</h2>
+
+  <button id="connectBtn" onclick="createSession()">
+    CONNECT MY WHATSAPP
+  </button>
+
+  <div class="result" id="sessionResult">
+    Pa gen session pou kounye a.
+  </div>
+
+  <img id="qr" hidden alt="WhatsApp QR Code">
+
+  <label>WhatsApp Number (509...)</label>
+  <input id="phone" placeholder="509XXXXXXXXXX">
+
+  <button onclick="getPairingCode()">
+    GET PAIRING CODE
+  </button>
+
+  <div class="result" id="pairResult"></div>
+  <div class="result" id="status"></div>
+</div>
+
+<div class="card">
+  <h2>⚙️ BOT CONFIGURATION</h2>
+
+  <label>WhatsApp Session ID</label>
+  <input id="sessionId" placeholder="MPKJUY">
+
+  <label>Prefix</label>
+  <input id="prefix" value=".">
+
+  <label>Bot Number</label>
+  <input id="botNumber" placeholder="509XXXXXXXXXX">
+
+  <label>Owner Number</label>
+  <input id="ownerNumber" placeholder="509XXXXXXXXXX">
+
+  <label>Bot Mode</label>
+  <select id="mode">
+    <option value="PUBLIC">PUBLIC</option>
+    <option value="PRIVATE">PRIVATE</option>
+  </select>
+
+  <label class="check">
+    <input type="checkbox" id="antiView">
+    Anti-view
+  </label>
+
+  <label class="check">
+    <input type="checkbox" id="antiLink">
+    Anti-link
+  </label>
+
+  <label class="check">
+    <input type="checkbox" id="antiSpam">
+    Anti-spam
+  </label>
+
+  <label class="check">
+    <input type="checkbox" id="antiDelete">
+    Anti-delete
+  </label>
+
+  <button onclick="createBot()">CREATE BOT</button>
+
+  <div class="result" id="configResult"></div>
+</div>
+
+<footer>
+  WISE PRINCE ✝️ — 2026
+</footer>
+
+<script>
+  let currentSession = null;
+  let pollTimer = null;
+
+  async function createSession() {
+    const btn = document.getElementById("connectBtn");
+    btn.disabled = true;
+
+    try {
+      const response = await fetch("/api/session/create", {
+        method: "POST"
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) throw new Error(data.error);
+
+      currentSession = data.sessionId;
+
+      document.getElementById("sessionId").value = currentSession;
+
+      document.getElementById("sessionResult").innerText =
+        "Session ID: " + currentSession;
+
+      document.getElementById("status").innerText =
+        "Ap tann koneksyon WhatsApp...";
+
+      if (pollTimer) clearInterval(pollTimer);
+
+      pollTimer = setInterval(checkSession, 3000);
+
+    } catch (error) {
+      document.getElementById("status").innerText = error.message;
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function checkSession() {
+    if (!currentSession) return;
+
+    try {
+      const response = await fetch(
+        "/api/session/" + encodeURIComponent(currentSession)
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) throw new Error(data.error);
+
+      document.getElementById("status").innerText =
+        "Status: " + data.status;
+
+      const qr = document.getElementById("qr");
+
+      if (data.qr) {
+        qr.src = data.qr;
+        qr.hidden = false;
+      }
+
+      if (data.status === "connected") {
+        qr.hidden = true;
+        clearInterval(pollTimer);
+        document.getElementById("status").innerText =
+          "WhatsApp konekte avèk siksè! ✅";
+      }
+    } catch (error) {
+      document.getElementById("status").innerText = error.message;
+    }
+  }
+
+  async function getPairingCode() {
+    const id = document.getElementById("sessionId").value.trim();
+    const phone = document.getElementById("phone").value.trim();
+
+    if (!id || !phone) {
+      alert("Antre Session ID ak nimewo WhatsApp ou.");
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        "/api/session/" + encodeURIComponent(id) + "/pair",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phoneNumber: phone })
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) throw new Error(data.error);
+
+      document.getElementById("pairResult").innerText =
+        "Pairing Code: " + data.pairingCode;
+
+    } catch (error) {
+      document.getElementById("pairResult").innerText = error.message;
+    }
+  }
+
+  async function createBot() {
+    const id = document.getElementById("sessionId").value.trim();
+
+    if (!id) {
+      alert("Antre Session ID ou.");
+      return;
+    }
+
+    const config = {
+      prefix: document.getElementById("prefix").value.trim() || ".",
+      botNumber: document.getElementById("botNumber").value.trim(),
+      ownerNumber: document.getElementById("ownerNumber").value.trim(),
+      mode: document.getElementById("mode").value,
+      antiView: document.getElementById("antiView").checked,
+      antiLink: document.getElementById("antiLink").checked,
+      antiSpam: document.getElementById("antiSpam").checked,
+      antiDelete: document.getElementById("antiDelete").checked
+    };
+
+    try {
+      const response = await fetch(
+        "/api/session/" + encodeURIComponent(id) + "/config",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(config)
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) throw new Error(data.error);
+
+      document.getElementById("configResult").innerText =
+        "Configuration anrejistre avèk siksè! 👑";
+
+    } catch (error) {
+      document.getElementById("configResult").innerText = error.message;
+    }
+  }
+</script>
+
+</body>
+  </html>
