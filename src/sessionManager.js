@@ -9,7 +9,7 @@ import fs from "fs";
 import path from "path";
 import { randomBytes } from "crypto";
 
-import { attachBotHandlers } from "./bot.js";
+import { import { attachBotHandlers } from "./src/bot.js";
 
 const sessions = new Map();
 
